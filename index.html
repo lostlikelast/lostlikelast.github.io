@@ -8,8 +8,8 @@
     <style>
         html,
         body{
-            width: 1920px;
-            height: 1080px;
+            /*width: 1920px;*/
+            /*height: 1080px;*/
         }
         #container {
             width: 424px;
@@ -18,8 +18,8 @@
         }
         .custom-content-marker {
             position: relative;
-            width: 25px;
-            height: 34px;
+            width: 40px;
+            height: 40px;
         }
 
         .custom-content-marker img {
@@ -47,7 +47,38 @@
             left: 0;
             width: 150px;
         }
+
+        .custom-content-marker {
+            position: relative;
+            width: 40px;
+            height: 40px;
+        }
+
+        .custom-content-marker img {
+            width: 100%;
+            height: 100%;
+        }
+
+        .custom-content-marker .close-btn {
+            position: absolute;
+            top: -6px;
+            right: -8px;
+            width: 15px;
+            height: 15px;
+            font-size: 12px;
+            background: #ccc;
+            border-radius: 50%;
+            color: #fff;
+            text-align: center;
+            line-height: 15px;
+            box-shadow: -1px 1px 1px rgba(10, 10, 10, .2);
+        }
+
+        .custom-content-marker .close-btn:hover{
+            background: #666;
+        }
     </style>
+    <script src="./js/util.js"></script>
 </head>
 <body>
 <div id="container"></div>
@@ -60,90 +91,150 @@
 <!--</script>-->
 <script src="https://webapi.amap.com/loader.js"></script>
 <script type="text/javascript">
-    var getDrivingLine = function (AMap,map) {
-        const startLngLat = [118.764172, 31.979453] //起始点坐标
-        const endLngLat = [118.76444, 31.978904] //终点坐标
-        AMap.plugin("AMap.Driving", function () {
-            var driving = new AMap.Driving({
-                //驾车路线规划策略，0是速度优先的策略
-                policy: 0,
-                //map 指定将路线规划方案绘制到对应的 AMap.Map 对象上
-                map: map,
-                //panel 指定将结构化的路线详情数据显示的对应的 DOM 上，传入值需是 DOM 的 ID
-                panel: "my-panel",
-            });
-            var points = [
-                { keyword: "北京市地震局（公交站）", city: "北京" },
-                { keyword: "亦庄文化园（地铁站）", city: "北京" },
-            ];
-            //搜索完成后，将自动绘制路线到地图上
-            driving.search(startLngLat,endLngLat);
-        });
-        return;
-        AMap.plugin(["AMap.Driving"], function () {
-            const driving = new AMap.Driving({
-                map: map,
-                panel: "my-panel",
-            });
-            //获取起终点规划线路
-            driving.search(startLngLat, endLngLat, function (status, result) {
-                if (status === "complete") {
-                    //status：complete 表示查询成功，no_data 为查询无结果，error 代表查询错误
-                    //查询成功时，result 即为对应的驾车导航信息
-                    console.log(result);
-                } else {
-                    console.log("获取驾车数据失败：" + result);
-                }
-            });
-        });
-        //引入和创建驾车规划插件
-        // AMap.plugin(["AMap.Driving"], function () {
-        //     const driving = new AMap.Driving({
-        //         map: map,
-        //         panel: "my-panel",
-        //     });
-        //     //获取起终点规划线路
-        //     driving.search(startLngLat, endLngLat, function (status, result) {
-        //         if (status === "complete") {
-        //             //status：complete 表示查询成功，no_data 为查询无结果，error 代表查询错误
-        //             //查询成功时，result 即为对应的驾车导航信息
-        //             console.log(result);
-        //         } else {
-        //             console.log("获取驾车数据失败：" + result);
-        //         }
-        //     });
-        // });
-    };
-    AMapLoader.load({
-        key: "1ed9e4a8d6cfbdf8ede6bbf6db792f25", //申请好的Web端开发者 Key，调用 load 时必填
-        version: "2.0", //指定要加载的 JS API 的版本，缺省时默认为 1.4.15
-    })
+    function getParameterByName(name, url) {
+        if (!url) url = window.location.href;
+        name = name.replace(/[\[\]]/g, '\\$&');
+        var regex = new RegExp('[?&]' + name + '(=([^&#]*)|&|#|$)'),
+            results = regex.exec(url);
+        if (!results) return null;
+        if (!results[2]) return '';
+        return decodeURIComponent(results[2].replace(/\+/g, ' '));
+    }
+    function showMarkers(mainMarker,markersData) {
+        AMapLoader.load({
+            key: "1ed9e4a8d6cfbdf8ede6bbf6db792f25", //申请好的Web端开发者key，调用 load 时必填
+            version: "2.0", //指定要加载的 JS API 的版本，缺省时默认为 1.4.15
+        })
         .then((AMap) => {
-            // const map = new AMap.Map("container");
-            const map = new AMap.Map("container", {
+            //JS API 加载完成后获取AMap对象
+            var map = new AMap.Map("container", {
                 viewMode: "2D", //默认使用 2D 模式
                 zoom: 15, //地图级别
-                center: [118.764172,31.979453], //地图中心点
+                center: mainMarker, //地图中心点
             });
+            //创建样式对象,JS API 2.0支持显示设置 zIndex, zIndex 越大约靠前，默认按顺序排列
+            var style = [
+                {
+                    url: "https://a.amap.com/jsapi_demos/static/images/mass0.png", //图标地址
+                    anchor: new AMap.Pixel(6, 6), //图标显示位置偏移量，基准点为图标左上角
+                    size: new AMap.Size(50, 50), //图标的尺寸
+                    zIndex: 3, //每种样式图标的叠加顺序，数字越大越靠前
+                },
+                {
+                    url: "https://bpic.588ku.com/element_origin_min_pic/19/04/10/cc6d9f4adf238c4687e6674b24816796.jpg",
+                    anchor: new AMap.Pixel(4, 4),
+                    size: new AMap.Size(30, 30),
+                    zIndex: 2,
+                },
+                //, …,{}, …
+            ];
+            var massMarks = new AMap.MassMarks(markersData,{
+                zIndex: 5, //海量点图层叠加的顺序
+                zooms: [12, 19], //在指定地图缩放级别范围内展示海量点图层
+                style: style, //设置样式对象
+            });
+            massMarks.setMap(map);
+
             //点标记显示内容
             const markerContent = `<div class="custom-content-marker">
-            <img src="//a.amap.com/jsapi_demos/static/demo-center/icons/dir-via-marker.png">
+            <img src="https://bpic.588ku.com/element_origin_min_pic/19/04/10/cc6d9f4adf238c4687e6674b24816796.jpg">
             </div>`
-            const position = new AMap.LngLat(118.764172,31.979453); //Marker 经纬度
+            const position = new AMap.LngLat(mainMarker[0], mainMarker[1]); //Marker 经纬度
             const marker = new AMap.Marker({
                 position: position,
                 content: markerContent, //将 html 传给 content
                 offset: new AMap.Pixel(-13, -30), //以 icon 的 [center bottom] 为原点
             });
             map.add(marker);
-            const points = [
-                { keyword: '南京市雨花台区雨花客厅',city:'南京' }, //起始点坐标
-                { keyword: '"南京市雨花台区雨花客厅9栋2F-22A',city:'南京' } //终点坐标
-            ]
-            getDrivingLine(AMap,map);
         })
         .catch((e) => {
             console.error(e); //加载错误提示
         });
+    }
+    function showLine() {
+        var getDrivingLine = function (AMap,map) {
+            const startLngLat = [118.764172, 31.979453] //起始点坐标
+            const endLngLat = [118.76444, 31.978904] //终点坐标
+            AMap.plugin("AMap.Driving", function () {
+                var driving = new AMap.Driving({
+                    //驾车路线规划策略，0是速度优先的策略
+                    policy: 0,
+                    //map 指定将路线规划方案绘制到对应的 AMap.Map 对象上
+                    map: map,
+                    //panel 指定将结构化的路线详情数据显示的对应的 DOM 上，传入值需是 DOM 的 ID
+                    panel: "my-panel",
+                });
+                var points = [
+                    { keyword: "北京市地震局（公交站）", city: "北京" },
+                    { keyword: "亦庄文化园（地铁站）", city: "北京" },
+                ];
+                //搜索完成后，将自动绘制路线到地图上
+                driving.search(startLngLat,endLngLat);
+            });
+        };
+        AMapLoader.load({
+            key: "1ed9e4a8d6cfbdf8ede6bbf6db792f25", //申请好的Web端开发者 Key，调用 load 时必填
+            version: "2.0", //指定要加载的 JS API 的版本，缺省时默认为 1.4.15
+        })
+            .then((AMap) => {
+                // const map = new AMap.Map("container");
+                const map = new AMap.Map("container", {
+                    viewMode: "2D", //默认使用 2D 模式
+                    zoom: 15, //地图级别
+                    center: [118.764172,31.979453], //地图中心点
+                });
+                //点标记显示内容
+                const markerContent = `<div class="custom-content-marker">
+            <img src="//a.amap.com/jsapi_demos/static/demo-center/icons/dir-via-marker.png">
+            </div>`
+                const position = new AMap.LngLat(118.764172,31.979453); //Marker 经纬度
+                const marker = new AMap.Marker({
+                    position: position,
+                    content: markerContent, //将 html 传给 content
+                    offset: new AMap.Pixel(-13, -30), //以 icon 的 [center bottom] 为原点
+                });
+                map.add(marker);
+                const points = [
+                    { keyword: '南京市雨花台区雨花客厅',city:'南京' }, //起始点坐标
+                    { keyword: '"南京市雨花台区雨花客厅9栋2F-22A',city:'南京' } //终点坐标
+                ]
+                getDrivingLine(AMap,map);
+            })
+            .catch((e) => {
+                console.error(e); //加载错误提示
+            });
+    }
+    var type = getParameterByName("mapType");
+    var viewWidth = getParameterByName("width");
+    var viewHeight = getParameterByName("height");
+    document.getElementById("container").style.width = viewWidth+"px";
+    document.getElementById("container").style.height = viewHeight+"px";
+    if (type === "markers") {
+        var longitude = getParameterByName("longitude");
+        var latitude = getParameterByName("latitude");
+        var parames = {
+            page:1,
+            pageSize:10,
+            areaType:"",
+            areaCode:"",
+            location: latitude+","+longitude
+        }
+        var queryString = objectToQueryString(parames);
+        makeRequest('GET', 'http://112.21.189.197:18085/lls-api//screen/shops/columns/near/shop?'+queryString, parames, function(error, response) {
+            if (error) {
+                console.error('Error:', error);
+            } else {
+                console.log('Response:', response);
+                if (response && response.code == 200 && response.result) {
+                    var mainMarker = [longitude,latitude]
+                    var markersData = getMarkers(response.result.records)
+                    console.log("getMarkers...",markersData)
+                    showMarkers(mainMarker,markersData);
+                }
+            }
+        });
+    }else if (type === "line") {
+        showLine();
+    }
 </script>
 </html>
